@@ -1,0 +1,8 @@
+pyaudio
+requests 
+pandas 
+pydub
+watchdog
+dotenv
+sarvamai
+groq
