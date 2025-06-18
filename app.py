@@ -5,18 +5,16 @@ import os
 import time
 import uuid
 import shutil
-from pydub import AudioSegment
 import threading
-
-# Import custom modules
-# Don't import process_pipeline directly to avoid module-level execution in pipeline.py
-from utils.LLM import findsolution 
-from utils.translate import chunk_text, translate_text
 import requests
 from sarvamai import SarvamAI
 from sarvamai.play import save
 import io
 import dotenv
+
+# Import custom modules
+from utils.LLM import findsolution
+from utils.translate import chunk_text, translate_text
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -114,51 +112,17 @@ async def process_audio_background(audio_path: str, request_id: str):
 
 def process_audio_pipeline(audio_path: str):
     """Process audio through the complete pipeline"""
-    from utils.speechToText import translate_audio
-    
     # Step 1: Speech to Text (English)
-    speech_headers = {"api-subscription-key": SARVAM_AI_API}
-    speech_data = {"model": "saaras:v2", "with_diarization": False}
+    english_text = speech_to_text(audio_path)
     
-    transcript_result = translate_audio(audio_path, speech_headers, speech_data)
-    english_text = transcript_result.get("transcript", "")
-    
-    if not english_text.strip():
+    if not english_text or not english_text.strip():
         return {"error": "No speech detected or transcription failed"}
     
     # Step 2: Generate solution using Gemini
     solution = findsolution(english_text)
     
     # Step 3: Translate to Bengali
-    translate_url = "https://api.sarvam.ai/translate"
-    headers = {
-        "api-subscription-key": SARVAM_AI_API,
-        "Content-Type": "application/json"
-    }
-    
-    chunks = chunk_text(solution, max_length=800)
-    translated_texts = []
-    
-    for chunk in chunks:
-        payload = {
-            "source_language_code": "en-IN",
-            "target_language_code": "bn-IN",
-            "speaker_gender": "Male",
-            "mode": "formal",
-            "model": "mayura:v1",
-            "enable_preprocessing": False,
-            "input": chunk
-        }
-        
-        response = requests.post(translate_url, json=payload, headers=headers)
-        
-        if response.status_code == 200:
-            translated_text = response.json().get("translated_text", "")
-            translated_texts.append(translated_text)
-        else:
-            translated_texts.append(chunk)  # Fallback to original text
-    
-    bengali_text = " ".join(translated_texts)
+    bengali_text = translate_text(solution)
     
     # Step 4: Convert Bengali text to speech
     audio_files = bengali_text_to_speech(bengali_text, request_id=str(uuid.uuid4()))
@@ -170,11 +134,36 @@ def process_audio_pipeline(audio_path: str):
         "audio_files": audio_files
     }
 
+def speech_to_text(audio_path: str):
+    """Convert speech to text using Sarvam API"""
+    if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
+        return ""
+    
+    try:
+        # Speech to text API endpoint
+        url = "https://api.sarvam.ai/speech-to-text-translate"
+        headers = {"api-subscription-key": SARVAM_AI_API}
+        data = {"model": "saaras:v2", "with_diarization": False}
+        
+        with open(audio_path, "rb") as audio_file:
+            files = {'file': ('audiofile.wav', audio_file, 'audio/wav')}
+            response = requests.post(url, headers=headers, files=files, data=data)
+        
+        if response.status_code == 200:
+            transcript = response.json().get("transcript", "")
+            return transcript
+        else:
+            print(f"STT Error: {response.status_code}, {response.text}")
+            return ""
+    except Exception as e:
+        print(f"Error in speech to text: {e}")
+        return ""
+
 def bengali_text_to_speech(bengali_text, request_id):
-    """Convert Bengali text to speech"""
+    """Convert Bengali text to speech using SarvamAI"""
     from utils.textToSpeech import split_text_into_chunks
     
-    if not bengali_text.strip():
+    if not bengali_text or not bengali_text.strip():
         return []
     
     client = SarvamAI(api_subscription_key=SARVAM_AI_API)
@@ -220,5 +209,4 @@ async def get_audio_file(filename: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
