@@ -41,6 +41,9 @@ english_doc = read_file("", "English")
 
 def chunk_text(text, max_length=1000):
     """Splits text into chunks of at most max_length characters while preserving word boundaries."""
+    if text is None:
+        return []
+        
     chunks = []
 
     while len(text) > max_length:
@@ -56,46 +59,80 @@ def chunk_text(text, max_length=1000):
 
     return chunks
 
-# Split the text
-english_text_chunks = chunk_text(english_doc)
-
-# Display chunk info
-print(f"Total Chunks: {len(english_text_chunks)}")
-for i, chunk in enumerate(english_text_chunks[:3], 1):  # Show only first 3 chunks for preview
-    print(f"\n=== Chunk {i} (Length: {len(chunk)}) ===\n{chunk}")
-
-# Define API request details
-url = "https://api.sarvam.ai/translate"
-headers = {
-    "api-subscription-key": SARVAM_API_KEY,
-    "Content-Type": "application/json"
-}
-
-# Send requests for each chunk
-translated_texts = []
-for idx, chunk in enumerate(english_text_chunks):
-    payload = {
-        "source_language_code": "en-IN",
-        "target_language_code": "bn-IN",
-        "speaker_gender": "Male",
-        "mode": "classic-colloquial",
-        "model": "mayura:v1",
-        "enable_preprocessing": False,
-        "input": chunk
+# Function to translate text from English to Bengali
+def translate_text(input_text, source_lang="en-IN", target_lang="bn-IN", mode="formal"):
+    """
+    Translate text using Sarvam API
+    
+    Args:
+        input_text: Text to translate
+        source_lang: Source language code
+        target_lang: Target language code
+        mode: Translation mode (formal/classic-colloquial)
+        
+    Returns:
+        Translated text as string
+    """
+    if not input_text or not input_text.strip():
+        return ""
+        
+    # Define API request details
+    url = "https://api.sarvam.ai/translate"
+    headers = {
+        "api-subscription-key": SARVAM_AI_API,
+        "Content-Type": "application/json"
     }
+    
+    # Split text into chunks
+    text_chunks = chunk_text(input_text)
+    
+    # Send requests for each chunk
+    translated_texts = []
+    for idx, chunk in enumerate(text_chunks):
+        payload = {
+            "source_language_code": source_lang,
+            "target_language_code": target_lang,
+            "speaker_gender": "Male",
+            "mode": mode,
+            "model": "mayura:v1",
+            "enable_preprocessing": False,
+            "input": chunk
+        }
 
-    response = requests.post(url, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers)
 
-    if response.status_code == 200:
-        translated_text = response.json().get("translated_text", "Translation not available")
-        translated_texts.append(translated_text)
-        print(f"\n=== Translated Chunk {idx + 1} ===\n{translated_text}\n")
-    else:
-        print(f"Error: {response.status_code}, {response.text}")
+        if response.status_code == 200:
+            translated_text = response.json().get("translated_text", "")
+            translated_texts.append(translated_text)
+        else:
+            print(f"Error: {response.status_code}, {response.text}")
 
-# Combine all translated chunks
-final_translation = "\n".join(translated_texts)
-print("\n=== Final Translated Text ===")
-print(final_translation)
+    # Combine all translated chunks
+    final_translation = " ".join(translated_texts)
+    return final_translation
+
+# Main function for testing
+def main():
+    english_doc = read_file("", "English")
+    if not english_doc:
+        english_doc = "This is a sample text for translation testing."
+        print(f"Using sample text: {english_doc}")
+        
+    # Split the text
+    english_text_chunks = chunk_text(english_doc)
+
+    # Display chunk info
+    print(f"Total Chunks: {len(english_text_chunks)}")
+    for i, chunk in enumerate(english_text_chunks[:3], 1):
+        print(f"\n=== Chunk {i} (Length: {len(chunk)}) ===\n{chunk}")
+        
+    # Translate each chunk
+    final_translation = translate_text(english_doc)
+    print("\n=== Final Translated Text ===")
+    print(final_translation)
+
+# Only run the main function if this script is executed directly
+if __name__ == "__main__":
+    main()
 
 

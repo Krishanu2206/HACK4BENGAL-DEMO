@@ -12,29 +12,15 @@ import glob
 import re
 from sarvamai import SarvamAI
 from sarvamai.play import play, save
-from LLM import findsolution
+from utils.LLM import findsolution
 
 dotenv.load_dotenv()
 SARVAM_AI_API = os.environ.get("SARVAM_AI_API")
 
-# API configurations
-speech_to_text_url = "https://api.sarvam.ai/speech-to-text-translate"
-translate_url = "https://api.sarvam.ai/translate"
-
-headers = {
-    "api-subscription-key": SARVAM_AI_API,
-    "Content-Type": "application/json"
-}
-
-speech_data = {
-    "model": "saaras:v2",
-    "with_diarization": False
-}
-
 # Global variables
+is_running = True
 file_queue = Queue()
 processed_files = set()
-is_running = True
 
 class AudioFileHandler(FileSystemEventHandler):
     """Handler for monitoring new audio files"""
@@ -444,6 +430,3 @@ def start_pipeline(audio_dir="audio_chunks"):
         is_running = False
         observer.stop()
         observer.join()
-
-if __name__ == "__main__":
-    start_pipeline()

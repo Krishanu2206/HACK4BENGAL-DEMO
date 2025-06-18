@@ -1,8 +1,12 @@
-pyaudio
 requests 
 pandas 
 pydub
 watchdog
-dotenv
+python-dotenv
 sarvamai
-groq
+fastapi
+uvicorn
+python-multipart
+google-generativeai
+uuid
+google
