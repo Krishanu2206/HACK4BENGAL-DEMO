@@ -7,11 +7,3 @@ uvicorn
 python-multipart
 google-generativeai
 watchdog
-
-# Optional dependencies
-# pyaudio - Install separately if needed
-# pydub - Removed due to dependency on pyaudioop in Python 3.13
-
-# Audio processing dependencies - for WAV file handling
-# Install these for audio processing on Linux:
-# sudo apt-get install ffmpeg
