@@ -27,7 +27,7 @@ app = FastAPI(title="Voice Processing API",
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update this with specific origins in production
+    allow_origins=["exp://192.168.244.225:8081", "*"],  # Update this with specific origins in production
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
